@@ -1,5 +1,24 @@
 #!/bin/bash
 
+script_directory=
+
+templates_directory="$script_directory"
+
+#Function to print menu
+menu() {
+	
+}
+
+#Function to verify user input
+positive_num() {
+
+}
+
+#Function to print error if needed
+error() {
+
+}
+
 #Function to deploy application
 deploy_application() {
 
