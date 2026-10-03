@@ -176,15 +176,22 @@ if [ -d "$project_directory" ]; then
 			if [ -d "$project_directory" ]; then
 				echo
 				echo "Overwriting failed"
+				return 1
 			else
 				echo
 				echo "Deletion complete"
 			fi
 		;;
-		*)
+		n|N)
 			echo
 			echo "Procedure aborted. Project will be left as is."
+			return 1
 		;;
+		*)
+                        echo
+                        echo "Invalid input. Procedure aborted."
+                        return 1
+                ;;
 	esac
 else
 	echo
@@ -192,10 +199,21 @@ else
 fi
 }
 
+create_directory() {
+	echo
+	if ! mkdir "$project_directory"; then
+		echo "Operation failed. Could not create '$project_directory'"
+	else
+		echo "Operation succeeded. Created '$project_directory'"
+	fi
+
+}
 
 pre-flight_checks
 ask_project_name
 check_if_directory_exists
+create_directory
+echo "--------------------"
 echo "deploy ran"
 
 
