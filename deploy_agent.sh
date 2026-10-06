@@ -209,10 +209,41 @@ create_directory() {
 
 }
 
+
+populate_fixed_files() {
+	if ! mkdir "$project_directory/Helpers"; then
+		echo "Creating Helpers subdirectory failed"
+		return 1
+	fi
+
+	if ! mkdir "$project_directory/reports"; then
+		echo "Creating reports subdirectory failed"
+		return 1
+	fi
+
+	if ! cp "$templates_directory/attendance_checker.py" "$project_directory"; then
+		echo "Copying attendance_checker.py failed"
+		return 1
+	fi
+
+	if ! cp "$templates_directory/config.json" "$project_directory/Helpers"; then
+		echo "Copying config.json failed"
+		return 1
+	fi
+	echo
+	echo "Population of fixed files is successful"
+}
+
+
+
+
+
+
 pre-flight_checks
 ask_project_name
 check_if_directory_exists
 create_directory
+populate_fixed_files
 echo "--------------------"
 echo "deploy ran"
 
