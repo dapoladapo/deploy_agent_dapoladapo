@@ -121,6 +121,7 @@ project_name=""
 project_directory=""
 
 ask_project_name() {
+echo
 while true; do
 	#If read doesn't work then close input field
 	if ! read -r -p "What is the name of the project: " project_name_input; then
@@ -145,6 +146,7 @@ while true; do
 		echo "Invalid symbols. Pleasae use only numbers and letters"
 	fi
 done
+echo "--------------------"
 }
 
 check_if_directory_exists() {
@@ -171,7 +173,7 @@ if [ -d "$project_directory" ]; then
 			else
 				rm -rf "$project_directory"
 			fi
-			
+	
 			#Confirming if directory was deleted
 			if [ -d "$project_directory" ]; then
 				echo
@@ -211,6 +213,10 @@ create_directory() {
 
 
 populate_fixed_files() {
+
+	echo
+	echo "--------------------"
+
 	if ! mkdir "$project_directory/Helpers"; then
 		echo "Creating Helpers subdirectory failed"
 		return 1
@@ -237,6 +243,8 @@ populate_fixed_files() {
 assets_template="$templates_directory/assets.csv"
 
 populate_roster() {
+echo
+echo "--------------------"
 echo
 echo "Pick an option for populating the assets.csv roster [a or b]"
 echo "Option A: Copy the roster template"
@@ -308,8 +316,110 @@ esac
 
 
 setting_permissions() {
-if ! chmod +x "$
+echo
+echo "--------------------"
+echo
+if ! chmod +x "$project_directory/attendance_checker.py"; then
+	echo "Failed to update permissions for attendance_checker.py"
+	return 1
+fi
+
+if ! chmod 600 "$project_directory/Helpers/config.json"; then
+	echo "Failed to update permissions for config.json"
+	return 1
+fi
+
+echo "Permissions updated"
+echo "Attendance_checker.py is executable and config.json is read/write only"
+ls -l "$project_directory/attendance_checker.py" "$project_directory/Helpers/config.json"
+
 }
+
+update_threshold() {
+echo
+echo "-------------------"
+echo
+
+#I commented this section out because the user may not have jq command installed and I am not sure if I am allowed to install it for the checker to work
+#warning_threshold=$(jq '.threshold.warning' "$project_directory/Helpers/config.json")
+#failure_threshold=$(jq '.threshold.failure' "$project_directory/Helpers/config.json")
+#echo "Current threshold levels: "
+#echo "Warning threshold: $warning_threshold"
+#echo "Failure threshold: $failure_threshold"
+#echo
+
+if ! read -r -p "Would you like to update alert thresholds? (y/n)" user_input_confirmation; then
+	echo "User input failed. Proceeding to exit"
+	return 1
+fi
+
+case "$user_input_confirmation" in
+	y|Y)
+		while true; do
+			if ! read -r -p "New value for warning threshold [0-100]: " new_warning_threshold; then
+				echo "User input failed. Proceeding to exit"
+				return 1
+			fi
+
+			#Checking if the user input is valid
+			if ! [[ "$new_warning_threshold" =~ ^[0-9]+$ ]]; then
+				echo "Please enter a number between 0-100"
+				return 1
+			elif [[ "$new_warning_threshold" -lt 0 || "$new_warning_threshold" -gt 100 ]]; then
+				echo "Please enter a number beteen 0-100"
+				return 1
+			else
+				break
+			fi
+		done
+
+		while true; do
+			if ! read -r -p "New value for failure threshold [0-100]: " new_failure_threshold; then
+				echo "User input failed. Proceeding to exit"
+				return 1
+			fi
+
+			#checking if the user input is valid
+			if ! [[ "$new_failure_threshold" =~ ^[0-9]+$ ]]; then
+                                echo "Please enter a number between 0-100"
+                                return 1
+                        elif [[ "$new_failure_threshold" -lt 0 || "$new_failure_threshold" -gt 100 ]]; then
+                                echo "Please enter a number beteen 0-100"
+                                return 1
+                        else
+                                break
+                        fi
+		done
+
+		#Updating config.json
+		if ! sed -i -E "s/(\"warning\":[[:space:]]*)[0-9]+/\1$new_warning_threshold/" "$project_directory/Helpers/config.json"; then
+			echo "Failed to update warning threshold. Reverting to default"
+			return 1
+		fi
+
+		if ! sed -i -E "s/(\"failure\":[[:space:]]*)[0-9]+/\1$new_failure_threshold/" "$project_directory/Helpers/config.json"; then
+                        echo "Failed to update failure threshold. Reverting to default"
+                        return 1
+                fi
+
+		#Confirmation
+		echo "Successfully updated thresholds to:"
+		echo "Warning threshold: $new_warning_threshold"
+		echo "Failure threshold: $new_failure_threshold"
+		echo
+	;;
+	n|N)
+		echo "Leaving the default thresholds."
+		return 0
+	;;
+	*)
+		echo "Invalid input. Please input 'y' or 'n' for confirmation"
+		return 1
+	;;
+esac
+
+}
+
 
 
 pre-flight_checks
@@ -319,10 +429,9 @@ create_directory
 populate_fixed_files
 populate_roster
 setting_permissions
+update_threshold
 echo "--------------------"
-echo "deploy ran"
-
-
+echo "System deployment complete"
 }
 
 #Function to run application
