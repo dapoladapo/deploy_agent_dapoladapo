@@ -1,6 +1,6 @@
 #!/bin/bash
 
-script_directory="/deploy_agent_dapoladapo"
+script_directory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 templates_directory="$script_directory/templates"
 
@@ -48,9 +48,6 @@ while true; do
 	esac
 done
 
-echo"Please pick option 1-4"
-
-
 }
 
 
@@ -59,14 +56,16 @@ echo"Please pick option 1-4"
 #Function to deploy application
 deploy_application() {
 
-pre-flight_checks() {
+pre_flight_checks() {
 
 	echo
 	echo "--------------------"
 	echo
 	if command -v python3; then
 		echo "Python version ="
-		python3 --version
+		if ! python3 --version; then
+			"python3 --version could not run"
+		fi
 		echo "Python3 is installed"
 	else
 		echo "Python3 is not installed"
@@ -110,6 +109,7 @@ pre-flight_checks() {
 	else
 		echo
 		echo "Template directory does not exist"
+		return 1
 	fi
 
 	echo
@@ -140,7 +140,7 @@ while true; do
 	elif [ -z "$project_name_input" ]; then
 		echo
 		echo "Input is empty"
-		return 0
+		return 1
 	else
 		echo
 		echo "Invalid symbols. Pleasae use only numbers and letters"
@@ -157,6 +157,7 @@ if [ -d "$project_directory" ]; then
 	if ! read -r -p "Do you want to overwrite it?(y/n): " user_overwrite_input; then
 		echo
 		echo "User input failed. Proceeding to exit."
+		return 1
 	fi
 
 	#if user consents then delete the folder and next function recreates it
@@ -173,7 +174,7 @@ if [ -d "$project_directory" ]; then
 			else
 				rm -rf "$project_directory"
 			fi
-	
+
 			#Confirming if directory was deleted
 			if [ -d "$project_directory" ]; then
 				echo
@@ -251,7 +252,7 @@ echo "Option A: Copy the roster template"
 echo "Option B: Generate a fresh roster"
 echo
 
-if ! read -r -p "Option: " option; then
+if ! read -r -p "Option: " option_for_roster; then
 	echo "User input failed. Proceeding to exit"
 	exit 1
 fi
@@ -272,13 +273,14 @@ if [[ "$user_input_rows" -gt "$csv_line_count" ]]; then
         return 1
 fi
 
-case "$option" in
+case "$option_for_roster" in
 	A|a)
 		echo "Option A selected"
 
 		#copy the amount of rows from csv template to file
-		if ! head -n $((csv_line_count)) "$assets_template" > "$project_directory/Helpers/assets.csv"; then
+		if ! head -n $((user_input_rows + 1)) "$assets_template" > "$project_directory/Helpers/assets.csv"; then
 			echo "Failed to copy roster template"
+			return 1
 		fi
 		echo "Copying roster template complete"
 
@@ -287,7 +289,7 @@ case "$option" in
 		echo "option B selected"
 		sample_emails=("alice@example.com" "bob@example.com" "charlie@example.com" "diana@example.com" "ethan@example.com" "fatima@example.com" "george@example.com" "hannah@example.com" "ibrahim@example.com" "jasmine@example.com")
 		sample_names=("Alice Johnson" "Bob Smith" "Charlie Davis" "Diana Prince" "Ethan Cole" "Fatima Noor" "George Mensah" "Hannah Kim" "Ibrahim Osei" "Jasmine Lee")
-		
+
 		#Creating the header line
 		if ! echo "Email,Names,Attendance Count,Absence Count" > "$project_directory/Helpers/assets.csv"; then
 			echo "Could not write to assests.csv. PLease update permissions"
@@ -386,6 +388,9 @@ case "$user_input_confirmation" in
                         elif [[ "$new_failure_threshold" -lt 0 || "$new_failure_threshold" -gt 100 ]]; then
                                 echo "Please enter a number beteen 0-100"
                                 return 1
+			elif [[ "$new_failure_threshold" -gt "$new_warning_threshold" ]]; then 
+				echo "Failure threshold should be lower than warning threshold"
+				return 1
                         else
                                 break
                         fi
@@ -420,18 +425,23 @@ esac
 
 }
 
+calling_functions() {
+#Calling each function and if it does not run, it should return with failure
 
+pre_flight_checks || return 1
+ask_project_name || return 1
+check_if_directory_exists || return 1
+create_directory || return 1
+populate_fixed_files || return 1
+populate_roster || return 1
+setting_permissions || return 1
+update_threshold || return 1
 
-pre-flight_checks
-ask_project_name
-check_if_directory_exists
-create_directory
-populate_fixed_files
-populate_roster
-setting_permissions
-update_threshold
 echo "--------------------"
 echo "System deployment complete"
+}
+
+calling_functions
 }
 
 #Function to run application
