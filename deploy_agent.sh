@@ -93,19 +93,19 @@ pre-flight_checks() {
 			echo "Assets template exists"
 		else
 			echo "Assets template don't exist"
-			exit 1
+			return 1
 		fi
 		if [ -f "$templates_directory/attendance_checker.py" ];  then
 			echo "Attendance checker template exists"
 		else
 			echo "Attendance checker template does not exist"
-			exit 1
+			return 1
 		fi
 		if [ -f "$templates_directory/config.json" ]; then
 			echo "Configuration file template exists"
 		else
 			echo "Configuration file template does not exist"
-			exit 1
+			return 1
 		fi
 	else
 		echo
@@ -126,7 +126,7 @@ while true; do
 	if ! read -r -p "What is the name of the project: " project_name_input; then
 		echo
 		echo "User input failed. Proceeding to exit"
-		exit 1
+		return 1
 	fi
 
 	#Checking for any invalid symbols or is empty
@@ -234,9 +234,82 @@ populate_fixed_files() {
 	echo "Population of fixed files is successful"
 }
 
+assets_template="$templates_directory/assets.csv"
+
+populate_roster() {
+echo
+echo "Pick an option for populating the assets.csv roster [a or b]"
+echo "Option A: Copy the roster template"
+echo "Option B: Generate a fresh roster"
+echo
+
+if ! read -r -p "Option: " option; then
+	echo "User input failed. Proceeding to exit"
+	exit 1
+fi
+
+csv_line_count=$(($(wc -l < "$assets_template") +1 ))
+if ! read -r -p "How many students do you want to copy? [Max=$csv_line_count]: " user_input_rows; then
+        echo "User input failed. Proceeding to exit"
+        return 1
+fi
+
+#Cheking if user_input_row is a number and isn't 0
+if ! [[ "$user_input_rows" =~ ^[0-9]+$ || "$user_input_rows" -eq 0 ]]; then
+        echo "Invalid input. Please type a number from 1 - $csv_line_count"
+        return 1
+fi
+if [[ "$user_input_rows" -gt "$csv_line_count" ]]; then
+        echo "Please type a number from 1 - $csv_line_count"
+        return 1
+fi
+
+case "$option" in
+	A|a)
+		echo "Option A selected"
+
+		#copy the amount of rows from csv template to file
+		if ! head -n $((csv_line_count)) "$assets_template" > "$project_directory/Helpers/assets.csv"; then
+			echo "Failed to copy roster template"
+		fi
+		echo "Copying roster template complete"
+
+	;;
+	B|b)
+		echo "option B selected"
+		sample_emails=("alice@example.com" "bob@example.com" "charlie@example.com" "diana@example.com" "ethan@example.com" "fatima@example.com" "george@example.com" "hannah@example.com" "ibrahim@example.com" "jasmine@example.com")
+		sample_names=("Alice Johnson" "Bob Smith" "Charlie Davis" "Diana Prince" "Ethan Cole" "Fatima Noor" "George Mensah" "Hannah Kim" "Ibrahim Osei" "Jasmine Lee")
+		
+		#Creating the header line
+		if ! echo "Email,Names,Attendance Count,Absence Count" > "$project_directory/Helpers/assets.csv"; then
+			echo "Could not write to assests.csv. PLease update permissions"
+			return 1
+		fi
+
+		#Creating new lines according to user input using the array of students.
+		for ((row = 0; row < user_input_rows; row++)); do
+			echo "${sample_emails[row]},${sample_names[row]},0,0" >> "$project_directory/Helpers/assets.csv"
+		done
+
+		#Updating the total sessions in config file
+		if ! sed -i -E 's/("total_sessions":[[:space:]]*)[0-9]+/\11/' "$project_directory/Helpers/config.json"; then
+			echo "Failed to update live sessions"
+			return 1
+		fi
+
+		echo "Generating a fresh complete. (Total sessions are set to 1)"
+	;;
+	*)
+		echo "Invalid input. Please pick option A or B"
+		return 1
+	;;
+esac
+}
 
 
-
+setting_permissions() {
+if ! chmod +x "$
+}
 
 
 pre-flight_checks
@@ -244,6 +317,8 @@ ask_project_name
 check_if_directory_exists
 create_directory
 populate_fixed_files
+populate_roster
+setting_permissions
 echo "--------------------"
 echo "deploy ran"
 
