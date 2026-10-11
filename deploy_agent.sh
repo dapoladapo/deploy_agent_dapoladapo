@@ -22,7 +22,7 @@ while true; do
 	if ! read -r -p "Pick an option between 1-4: " option; then
 		echo
 		echo "User input failed. Proceeding to exit"
-		exit 1
+		return 1
 	fi
 
 
@@ -64,7 +64,7 @@ pre_flight_checks() {
 	if command -v python3; then
 		echo "Python version ="
 		if ! python3 --version; then
-			"python3 --version could not run"
+			echo "python3 --version could not run"
 		fi
 		echo "Python3 is installed"
 	else
@@ -166,11 +166,11 @@ if [ -d "$project_directory" ]; then
 			if [ "$project_directory" = "/" ]; then
 				echo
 				echo "Dangerous command. Aborting."
-				exit 1
+				return 1
 			elif [ "$project_directory" = "" ]; then
 				echo
 				echo "Nothing to overwrite. Aborting."
-				exit 1
+				return 1
 			else
 				rm -rf "$project_directory"
 			fi
@@ -206,6 +206,7 @@ create_directory() {
 	echo
 	if ! mkdir "$project_directory"; then
 		echo "Operation failed. Could not create '$project_directory'"
+		return 1
 	else
 		echo "Operation succeeded. Created '$project_directory'"
 	fi
@@ -254,19 +255,23 @@ echo
 
 if ! read -r -p "Option: " option_for_roster; then
 	echo "User input failed. Proceeding to exit"
-	exit 1
+	return 1
 fi
 
 csv_line_count=$(($(wc -l < "$assets_template") +1 ))
-if ! read -r -p "How many students do you want to copy? [Max=$csv_line_count]: " user_input_rows; then
+if ! read -r -p "How many students are there? [Max=$csv_line_count]: " user_input_rows; then
         echo "User input failed. Proceeding to exit"
         return 1
 fi
 
 #Cheking if user_input_row is a number and isn't 0
-if ! [[ "$user_input_rows" =~ ^[0-9]+$ || "$user_input_rows" -eq 0 ]]; then
+if ! [[ "$user_input_rows" =~ ^[0-9]+$ ]]; then
         echo "Invalid input. Please type a number from 1 - $csv_line_count"
         return 1
+fi
+if [[ "$user_input_rows" -eq 0 ]]; then
+	echo "Invalid input. Please type a number from 1 - $csv_line_count"
+	return 1
 fi
 if [[ "$user_input_rows" -gt "$csv_line_count" ]]; then
         echo "Please type a number from 1 - $csv_line_count"
@@ -388,7 +393,7 @@ case "$user_input_confirmation" in
                         elif [[ "$new_failure_threshold" -lt 0 || "$new_failure_threshold" -gt 100 ]]; then
                                 echo "Please enter a number beteen 0-100"
                                 return 1
-			elif [[ "$new_failure_threshold" -gt "$new_warning_threshold" ]]; then 
+			elif [[ "$new_failure_threshold" -ge "$new_warning_threshold" ]]; then 
 				echo "Failure threshold should be lower than warning threshold"
 				return 1
                         else
