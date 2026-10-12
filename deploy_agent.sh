@@ -64,7 +64,7 @@ signal_handling() {
 trap "" SIGINT SIGTSTP
 
 echo
-echo "Deploment was interrupted by a signal"
+echo "Deployment was interrupted by a signal"
 
 project_zip_name="attendance_tracker_${project_name}_archive.zip"
 
@@ -72,10 +72,10 @@ project_zip_name="attendance_tracker_${project_name}_archive.zip"
 if [[ "$project_directories_created" -eq 1 ]] && [[ -n "$project_name" ]] && [[ -d "$project_directory" ]]; then
 	rm -f "$script_directory/$project_zip_name"
 	
-	if zip -rq "$script_directory/$project_zip_name" "$project_directory"; then
+	if ( cd "$script_directory" &&  zip -rq "$script_directory/$project_zip_name" "$project_directory" ); then
 		echo "The incomplete project has been safely archived to: $script_directory/$project_zip_name"
 
-		if rm -rf "project_directory"; then
+		if rm -rf "$project_directory"; then
 			echo "The incomplete project has been removed."
 		else
 			echo "Incomplete project failed to be removed."
@@ -99,6 +99,9 @@ deploy_application() {
 trap 'signal_handling SIGINT' SIGINT
 trap 'signal_handling SIGTSTP' SIGTSTP
 
+project_directories_created=0
+project_name=""
+project_directory=""
 pre_flight_checks() {
 
 	echo
@@ -108,6 +111,7 @@ pre_flight_checks() {
 		echo "Python version ="
 		if ! python3 --version; then
 			echo "python3 --version could not run"
+			return 1
 		fi
 		echo "Python3 is installed"
 	else
@@ -134,7 +138,7 @@ pre_flight_checks() {
 		if [ -f "$templates_directory/assets.csv" ]; then
 			echo "Assets template exists"
 		else
-			echo "Assets template don't exist"
+			echo "Assets template doesn't exist"
 			return 1
 		fi
 		if [ -f "$templates_directory/attendance_checker.py" ];  then
@@ -178,13 +182,13 @@ while true; do
 		echo
 		echo "Confirmed project name"
 		return 0
-	elif [ -z "$project_name_input" ]; then
+	elif [ -z "$project_name_input" ] || [ ! -n "$project_name_input" ]; then
 		echo
 		echo "Input is empty"
 		return 1
 	else
 		echo
-		echo "Invalid symbols. Pleasae use only numbers and letters"
+		echo "Invalid symbols. Please use only numbers and letters"
 	fi
 done
 echo "--------------------"
@@ -306,8 +310,6 @@ if ! read -r -p "How many students are there? [Max=$csv_line_count]: " user_inpu
         return 1
 fi
 
-#Making sure the rows correlate
-$((user_input_rows + 1))
 
 #Cheking if user_input_row is a number and isn't 0
 if ! [[ "$user_input_rows" =~ ^[0-9]+$ ]]; then
@@ -342,7 +344,7 @@ case "$option_for_roster" in
 
 		#Creating the header line
 		if ! echo "Email,Names,Attendance Count,Absence Count" > "$project_directory/Helpers/assets.csv"; then
-			echo "Could not write to assests.csv. PLease update permissions"
+			echo "Could not write to assests.csv. Please update permissions"
 			return 1
 		fi
 
@@ -353,11 +355,11 @@ case "$option_for_roster" in
 
 		#Updating the total sessions in config file
 		if ! sed -i -E 's/("total_sessions":[[:space:]]*)[0-9]+/\11/' "$project_directory/Helpers/config.json"; then
-			echo "Failed to update live sessions"
+			echo "Failed to update total sessions"
 			return 1
 		fi
 
-		echo "Generating a fresh complete. (Total sessions are set to 1)"
+		echo "Generating a fresh roster completer. (Total sessions are set to 1)"
 	;;
 	*)
 		echo "Invalid input. Please pick option A or B"
@@ -400,7 +402,7 @@ echo
 #echo "Failure threshold: $failure_threshold"
 #echo
 
-if ! read -r -p "Would you like to update alert thresholds? (y/n)" user_input_confirmation; then
+if ! read -r -p "Would you like to update alert thresholds? (y/n): " user_input_confirmation; then
 	echo "User input failed. Proceeding to exit"
 	return 1
 fi
@@ -418,7 +420,7 @@ case "$user_input_confirmation" in
 				echo "Please enter a number between 0-100"
 				return 1
 			elif [[ "$new_warning_threshold" -lt 0 || "$new_warning_threshold" -gt 100 ]]; then
-				echo "Please enter a number beteen 0-100"
+				echo "Please enter a number between 0-100"
 				return 1
 			else
 				break
@@ -436,7 +438,7 @@ case "$user_input_confirmation" in
                                 echo "Please enter a number between 0-100"
                                 return 1
                         elif [[ "$new_failure_threshold" -lt 0 || "$new_failure_threshold" -gt 100 ]]; then
-                                echo "Please enter a number beteen 0-100"
+                                echo "Please enter a number between 0-100"
                                 return 1
 			elif [[ "$new_failure_threshold" -ge "$new_warning_threshold" ]]; then 
 				echo "Failure threshold should be lower than warning threshold"
@@ -491,16 +493,14 @@ echo "--------------------"
 echo "System deployment complete"
 }
 
-calling_functions
-
 
 #removing the signal_handling once the deployment is over
 if calling_functions; then
-	trap - SIGINT SIGSTP
+	trap - SIGINT SIGTSTP
 	echo "Verifying the deployment by running the project"
-	run_application "$project_directory"
+	run_application
 else
-	trap - SIGINT SIGSTP
+	trap - SIGINT SIGTSTP
 	echo "Deployment failed"
 	return 1
 fi
@@ -576,6 +576,47 @@ echo
 #Function to archive log files
 archive_log_files() {
 
+#Shows existing projects so user picks
+echo "Existing projects: "
+existing_projects=$(find "$script_directory" -maxdepth 1 -type d -name 'attendance_tracker_*')
+if [[ -n "$existing_projects" ]]; then
+        echo "$existing_projects"
+else
+        echo "None were found"
+        return 1
+fi
+
+#First select the one of the avaliable projects
+if ! read -r -p "Select project name (without 'attendance_tracker_'): " user_selected_project; then
+        echo "User input failed. Proceeding to exit"
+        return 1
+fi
+
+#validating user input
+if [[ ! "$user_selected_project" =~ ^[A-Za-z0-9_][A-Za-z0-9_]*$ ]]; then
+        echo "Invalid input. Please use only  letters, numbers or an underscore"
+        return 1
+fi
+
+selected_project_directory="$script_directory/attendance_tracker_$user_selected_project"
+
+#Making sure the selected project exists and has necessary files
+if [[ -z "$selected_project_directory" ]]; then
+        echo "Project is empty"
+        return 1
+elif [[ ! -d "$selected_project_directory" ]]; then
+        echo "Project not found"
+        return 1
+fi
+
+if [[ ! -f "$selected_project_directory/attendance_checker.py" ]]; then
+        echo "attendance_checker.py file not found. Proceeding to exit"
+        return 1
+elif [[ ! -d "$selected_project_directory/Helpers" ]]; then
+        echo "Helpers directory not found. Proceeding to exit"
+        return 1
+fi
+
 #Check if reports directory exists
 if [[ ! -d "$selected_project_directory/reports" ]]; then
         echo "There are no reports directory found in the selected projects directory. Make sure the project has been deployed"
@@ -586,6 +627,9 @@ fi
 timestamp=$(date +%Y%m%d_%H%M%S)
 
 #Starting the archiving of logs
+
+archived_files=0
+
 echo
 echo "Archiving logs"
 echo "-------------------"
@@ -608,9 +652,9 @@ for log_file in attendance absent; do
                 fi
 
                 echo "Archived: $project_archive_file"
-                archived_files=$((archived + 1))
+                ((archived_files++))
         else
-                echo "Nothing to archived"
+                echo "Nothing to archive"
         fi
 done
 
