@@ -259,11 +259,14 @@ if ! read -r -p "Option: " option_for_roster; then
 	return 1
 fi
 
-csv_line_count=$(($(wc -l < "$assets_template") +1 ))
+csv_line_count=$(($(wc -l < "$assets_template") ))
 if ! read -r -p "How many students are there? [Max=$csv_line_count]: " user_input_rows; then
         echo "User input failed. Proceeding to exit"
         return 1
 fi
+
+#Making sure the rows correlate
+$((user_input_rows + 1))
 
 #Cheking if user_input_row is a number and isn't 0
 if ! [[ "$user_input_rows" =~ ^[0-9]+$ ]]; then
@@ -457,9 +460,9 @@ run_application() {
 
 #Shows existing projects so user picks
 echo "Existing projects: "
-existing_projects=$(find "$script_directory" -maxdepth 1 -type d -name 'attendance_checker_*')
-if [[ -n "existing_projects" ]]; then
-	echo $"existing_projects"
+existing_projects=$(find "$script_directory" -maxdepth 1 -type d -name 'attendance_tracker_*')
+if [[ -n "$existing_projects" ]]; then
+	echo "$existing_projects"
 else
 	echo "None were found"
 	return 1
@@ -519,7 +522,52 @@ echo
 
 #Function to archive log files
 archive_log_files() {
-echo "Archive run"
+
+#Check if reports directory exists
+if [[ ! -d "$selected_project_directory/reports" ]]; then
+        echo "There are no reports directory found in the selected projects directory. Make sure the project has been deployed"
+        return 1
+fi
+
+#Keeping a timestamp so all files have the same timestamp
+timestamp=$(date +%Y%m%d_%H%M%S)
+
+#Starting the archiving of logs
+echo
+echo "Archiving logs"
+echo "-------------------"
+
+for log_file in attendance absent; do
+        log_file_path="$selected_project_directory/reports/$log_file.log"
+        project_archive_directory="$selected_project_directory/archives/$log_file"
+        project_archive_file="$project_archive_directory/${log_file}_${timestamp}.log"
+
+        #Check if the log file exists
+        if [[ -f "$log_file_path" ]]; then
+                if ! mkdir -p "$project_archive_directory"; then
+                        echo "Failed to create a project archive folder"
+                        return 1
+                fi
+
+                if ! mv "$log_file_path" "$project_archive_file"; then
+                        echo "Failed to archive reports/$log_file.log"
+                        return 1
+                fi
+
+                echo "Archived: $project_archive_file"
+                archived_files=$((archived + 1))
+        else
+                echo "$log_file does not exist therefore there is nothing to archived"
+        fi
+done
+
+echo "-------------------"
+
+if [[ "$archived_files" -eq 0 ]]; then
+        echo "There are no logs found. Please run the application first"
+else
+        echo "$archived_files log file(s) archived"
+fi
 
 }
 
