@@ -4,7 +4,14 @@ script_directory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 templates_directory="$script_directory/templates"
 
+project_name=""
+
+project_directory=""
+
 selected_project_directory=""
+
+project_directories_created=0
+
 #Function to print menu
 menu() {
 
@@ -51,11 +58,46 @@ done
 
 }
 
+#Function nto handle signal interrupts
+signal_handling() {
 
+trap "" SIGINT SIGTSTP
+
+echo
+echo "Deploment was interrupted by a signal"
+
+project_zip_name="attendance_tracker_${project_name}_archive.zip"
+
+#Checking if there is a directory created, project name and whether its directory exists
+if [[ "$project_directories_created" -eq 1 ]] && [[ -n "$project_name" ]] && [[ -d "$project_directory" ]]; then
+	rm -f "$script_directory/$project_zip_name"
+	
+	if zip -rq "$script_directory/$project_zip_name" "$project_directory"; then
+		echo "The incomplete project has been safely archived to: $script_directory/$project_zip_name"
+
+		if rm -rf "project_directory"; then
+			echo "The incomplete project has been removed."
+		else
+			echo "Incomplete project failed to be removed."
+		fi
+	else
+		echo "Incomplete project has failed to archive. Keeping the project directory"
+	fi
+else
+	echo "No project was created. Proceeding to exit."
+fi
+
+echo "Exiting..."
+exit 0
+}
 
 
 #Function to deploy application
 deploy_application() {
+
+#signal capturing
+trap 'signal_handling SIGINT' SIGINT
+trap 'signal_handling SIGTSTP' SIGTSTP
 
 pre_flight_checks() {
 
@@ -118,8 +160,6 @@ pre_flight_checks() {
 	echo "--------------------"
 
 }
-project_name=""
-project_directory=""
 
 ask_project_name() {
 echo
@@ -209,6 +249,7 @@ create_directory() {
 		echo "Operation failed. Could not create '$project_directory'"
 		return 1
 	else
+		project_directories_created=1
 		echo "Operation succeeded. Created '$project_directory'"
 	fi
 
@@ -451,6 +492,18 @@ echo "System deployment complete"
 }
 
 calling_functions
+
+
+#removing the signal_handling once the deployment is over
+if calling_functions; then
+	trap - SIGINT SIGSTP
+	echo "Verifying the deployment by running the project"
+	run_application "$project_directory"
+else
+	trap - SIGINT SIGSTP
+	echo "Deployment failed"
+	return 1
+fi
 }
 
 
