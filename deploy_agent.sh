@@ -4,6 +4,7 @@ script_directory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 templates_directory="$script_directory/templates"
 
+selected_project_directory=""
 #Function to print menu
 menu() {
 
@@ -449,16 +450,76 @@ echo "System deployment complete"
 calling_functions
 }
 
+
+
 #Function to run application
 run_application() {
-echo "run ran"
 
+#Shows existing projects so user picks
+echo "Existing projects: "
+existing_projects=$(find "$script_directory" -maxdepth 1 -type d -name 'attendance_checker_*')
+if [[ -n "existing_projects" ]]; then
+	echo $"existing_projects"
+else
+	echo "None were found"
+	return 1
+fi
+
+#First select the one of the avaliable projects
+if ! read -r -p "Select project name (without 'attendance_tracker_'): " user_selected_project; then
+	echo "User input failed. Proceeding to exit"
+	return 1
+fi
+
+#validating user input
+if [[ ! "$user_selected_project" =~ ^[A-Za-z0-9_][A-Za-z0-9_]*$ ]]; then
+	echo "Invalid input. Please use only  letters, numbers or an underscore"
+	return 1
+fi
+
+selected_project_directory="$script_directory/attendance_tracker_$user_selected_project"
+
+#Making sure the selected project exists and has necessary files
+if [[ -z "$selected_project_directory" ]]; then
+	echo "Project is empty"
+	return 1
+elif [[ ! -d "$selected_project_directory" ]]; then
+	echo "Project not found"
+	return 1
+fi
+
+if [[ ! -f "$selected_project_directory/attendance_checker.py" ]]; then
+	echo "attendance_checker.py file not found. Proceeding to exit"
+	return 1
+elif [[ ! -d "$selected_project_directory/Helpers" ]]; then
+	echo "Helpers directory not found. Proceeding to exit"
+	return 1
+fi
+
+#If everything is set, i start the attendance tracker
+echo
+echo "Starting the attendance tracker"
+echo "--------------------"
+
+if ! cd "$selected_project_directory"; then
+	echo "Could not change directories"
+	return 1
+fi
+
+if ! python3 attendance_checker.py; then
+	echo "Could not run python file"
+	return 1
+fi
+
+echo "--------------------"
+echo "Closing attendance tracker"
+echo
 
 }
 
 #Function to archive log files
 archive_log_files() {
-echo "Archive ran"
+echo "Archive run"
 
 }
 
