@@ -72,7 +72,7 @@ project_zip_name="attendance_tracker_${project_name}_archive.zip"
 if [[ "$project_directories_created" -eq 1 ]] && [[ -n "$project_name" ]] && [[ -d "$project_directory" ]]; then
 	rm -f "$script_directory/$project_zip_name"
 	
-	if ( cd "$script_directory" &&  zip -rq "$script_directory/$project_zip_name" "$project_directory" ); then
+	if ( cd "$script_directory" &&  zip -rq "$script_directory/$project_zip_name" "attendance_tracker_$project_name" ); then
 		echo "The incomplete project has been safely archived to: $script_directory/$project_zip_name"
 
 		if rm -rf "$project_directory"; then
