@@ -557,7 +557,7 @@ for log_file in attendance absent; do
                 echo "Archived: $project_archive_file"
                 archived_files=$((archived + 1))
         else
-                echo "$log_file does not exist therefore there is nothing to archived"
+                echo "Nothing to archived"
         fi
 done
 
