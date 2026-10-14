@@ -6,11 +6,11 @@
 
 This application is a script that if built with 3 features: to deploy, run and archive logs of a student attendance tracker. 
 
-No. | Feature | Description
---- | --- | ---
-1.  | Deploy  | This feature is built to check that all the requirements to run this system is set, builds out the system structure and sets up the ideal environment for the system to run. 
-2.  | Run     | This feature will start the student attendance in a deployed project. 
-3.  | Archive | This feature is will move all the active logs into an archived folder with timestamps. 
+|No. | Feature | Description
+|--- | --- | ---
+|1.  | Deploy  | This feature is built to check that all the requirements to run this system is set, builds out the system structure and sets up the ideal environment for the system to run. 
+|2.  | Run     | This feature will start the student attendance in a deployed project. 
+|3.  | Archive | This feature is will move all the active logs into an archived folder with timestamps. 
 
 
 
@@ -185,8 +185,8 @@ How it works
 - Lists the existing projects and asks whih one you want to archive
 - Validates the users answer and confirms that the `reports/` folder exists with necessary files inside. 
 - Assign a timestamp variable in the format (`YYYYMMDD_HHMMSS`) so all archived files have the same timestamp
-- For each log(`attendance.log`, `absent.log'):
-	- If it exists, creates its own archive folder(`archives/attendance/` and `archives/absent/`) and moves it there with the timestamp in the name (`attendance_<timestamp>.log) or (`absent_<timestamp>.log`)
+- For each log(`attendance.log`, `absent.log`):
+	- If it exists, creates its own archive folder(`archives/attendance/` and `archives/absent/`) and moves it there with the timestamp in the name (`attendance_<timestamp>.log`) or (`absent_<timestamp>.log`)
 	- if it does not exist, the script reports `Nothing to archive` and continues. 
 - Lastly it prints the path to each archived file and displays the total number of files archived
 
@@ -226,7 +226,7 @@ unzip -l attendance_tracker_<name>_archive.zip
 6. Repeat the interruption at the project name prompt (Nothing will be created)
 
 ## Testing
-### Feature 1
+### Feature 1: Deploy
 Aspect | Test | Result
 --- | --- | ---
 Pre-flight checks | Run it with a template file missing | Clear message error
@@ -241,13 +241,13 @@ Update thresholds | Using valid values | Only warning and failure values were up
 Update thresholds | Tested with abc, exceeding range and with a higher failure value | Failed with a message
 Verify deployment | Finish deployment | Automatically starts app
 
-### Feature 2
+### Feature 2: Run
 Aspect | Test | Result
 --- | --- | ---
 Run | Mark each student present or absent | Counts update and logs appear
 Run | Ctrl+C during marking | The app reports that progress is saved and script returns to menu
 
-### Feature 3
+### Feature 3: Archive logs
 Aspect | Test | Result
 --- | --- | ---
 Archive | Run with an absent student then archive | Both logs are archived with the same timestamp
